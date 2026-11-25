@@ -1,0 +1,86 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: payment-service
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: false
+    consumer:
+      group-id: payment-service
+  jpa:
+    open-in-view: false
+
+app:
+  kafka:
+    listeners:
+      charge-concurrency: 8
+      refund-concurrency: 2
+    retry:
+      max-retries: 3
+      initial-interval: 1s
+      max-interval: 4s
+      multiplier: 2
+  gateway:
+    base-url: ${PAYMENT_GATEWAY_URL:http://localhost:8089}
+    connect-timeout: 1s
+    read-timeout: 2s
+  datasource:
+    charge-pool:
+      jdbc-url: ${PAYMENT_CHARGE_JDBC_URL:jdbc:postgresql://localhost:5434/payments}
+      username: ${PAYMENT_DB_USERNAME:payment}
+      password: ${PAYMENT_DB_PASSWORD:payment}
+      driver-class-name: org.postgresql.Driver
+      pool-name: charge-pool
+      maximum-pool-size: 10
+      minimum-idle: 2
+    query-pool:
+      jdbc-url: ${PAYMENT_QUERY_JDBC_URL:jdbc:postgresql://localhost:5434/payments}
+      username: ${PAYMENT_DB_USERNAME:payment}
+      password: ${PAYMENT_DB_PASSWORD:payment}
+      driver-class-name: org.postgresql.Driver
+      pool-name: query-pool
+      maximum-pool-size: 5
+      minimum-idle: 1
+
+resilience4j:
+  bulkhead:
+    instances:
+      gatewayCharge:
+        register-health-indicator: true
+        max-concurrent-calls: 5
+        max-wait-duration: 0
+  circuitbreaker:
+    instances:
+      gatewayCharge:
+        register-health-indicator: true
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 20
+        minimum-number-of-calls: 20
+        failure-rate-threshold: 50
+        slow-call-rate-threshold: 50
+        slow-call-duration-threshold: 1s
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 5
+        automatic-transition-from-open-to-half-open-enabled: true
+        ignore-exceptions:
+          - org.springframework.web.client.HttpClientErrorException
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,circuitbreakers,circuitbreakerevents,bulkheads
+  endpoint:
+    health:
+      show-details: always
+  health:
+    circuitbreakers:
+      enabled: true
+    bulkheads:
+      enabled: true

@@ -1,0 +1,66 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: booking-service
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: false
+    consumer:
+      group-id: booking-results
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+app:
+  booking:
+    hold-duration: ${BOOKING_HOLD_DURATION:PT10M}
+    expiry-scan-delay: 30s
+    simulated-create-delay: ${BOOKING_SIMULATED_CREATE_DELAY:10ms}
+  datasource:
+    booking-write:
+      jdbc-url: ${BOOKING_WRITE_JDBC_URL:jdbc:postgresql://localhost:5433/bookings}
+      username: ${BOOKING_DB_USERNAME:booking}
+      password: ${BOOKING_DB_PASSWORD:booking}
+      driver-class-name: org.postgresql.Driver
+      pool-name: booking-write
+      maximum-pool-size: 20
+      minimum-idle: 2
+    result-consumer:
+      jdbc-url: ${BOOKING_RESULT_JDBC_URL:jdbc:postgresql://localhost:5433/bookings}
+      username: ${BOOKING_DB_USERNAME:booking}
+      password: ${BOOKING_DB_PASSWORD:booking}
+      driver-class-name: org.postgresql.Driver
+      pool-name: result-consumer
+      maximum-pool-size: 5
+      minimum-idle: 1
+
+resilience4j:
+  bulkhead:
+    instances:
+      createBooking:
+        register-health-indicator: true
+        max-concurrent-calls: 40
+        max-wait-duration: 0
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,circuitbreakers,circuitbreakerevents,bulkheads
+  endpoint:
+    health:
+      show-details: always
+  health:
+    bulkheads:
+      enabled: true

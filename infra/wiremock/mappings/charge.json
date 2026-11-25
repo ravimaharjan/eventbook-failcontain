@@ -1,0 +1,18 @@
+{
+  "id": "41fc0ed5-2712-4c72-96a1-7710a0d81f18",
+  "request": {
+    "method": "POST",
+    "urlPath": "/charge"
+  },
+  "response": {
+    "status": 200,
+    "fixedDelayMilliseconds": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "approved": true,
+      "transactionId": "mock-transaction"
+    }
+  }
+}
