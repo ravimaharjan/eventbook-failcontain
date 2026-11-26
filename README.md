@@ -81,7 +81,7 @@ booking creations and 5 concurrent gateway calls, with no waiting for a permit.
 
 
    ```sh
-   bash booking-service/scripts/booking-surge.sh
+   bash booking-service/scripts/v4_booking-surge.sh
    ```
 
 3. Completion of the script, gives the result as shown in the image. Evidence of the bulkhead is **HTTP 429** for excess requests, with permits

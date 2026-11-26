@@ -61,6 +61,13 @@ public class BookingService {
 
     @Transactional(readOnly = true, transactionManager = "bookingWriteTransactionManager")
     public BookingResponse get(UUID id) {
+        try {
+            Thread.sleep(5000);
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            log.warn("Get booking interrupted during simulated delay", exception);
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Get booking interrupted", exception);
+        }
         return bookings.findById(id)
                 .map(BookingResponse::from)
                 .orElseThrow(() -> new BookingNotFoundException(id));

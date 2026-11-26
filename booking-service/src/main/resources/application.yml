@@ -1,5 +1,8 @@
 server:
   port: 8081
+  tomcat:
+    mbeanregistry:
+      enabled: true
 
 spring:
   application:
@@ -51,6 +54,10 @@ resilience4j:
       createBooking:
         register-health-indicator: true
         max-concurrent-calls: 40
+        max-wait-duration: 0
+      getBooking:
+        register-health-indicator: true
+        max-concurrent-calls: 100
         max-wait-duration: 0
 
 management:

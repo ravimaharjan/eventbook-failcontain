@@ -32,6 +32,7 @@ public class BookingController {
     }
 
     @GetMapping("/{id}")
+    @Bulkhead(name = "getBooking", type = Bulkhead.Type.SEMAPHORE)
     public BookingResponse get(@PathVariable UUID id) {
         return bookings.get(id);
     }
