@@ -51,58 +51,23 @@ curl -X PUT http://localhost:8089/__admin/mappings/41fc0ed5-2712-4c72-96a1-7710a
 ```
 
 Set `fixedDelayMilliseconds` back to `200` to restore the baseline gateway.
-The verification steps below provide a reusable command for changing the delay.
+
+## Verification use cases
+
+The [test-usecases](test-usecases/) folder contains the detailed scenarios,
+their prerequisites and expected behavior. These are manual experiments that
+create test data and may leave messages in Kafka.
+
+- [V1: Baseline](test-usecases/v1_usecase.md) — steady booking load with a healthy gateway.
+- [V2: Gateway slow](test-usecases/v2_usecase.md) — observe gateway protection.
+- [V3: Blast radius](test-usecases/v3_usecase.md) — check queries and refunds during V2.
+- [V4: Booking surge](test-usecases/v4_usecase.md) — observe booking load shedding.
+- [V5: Recovery](test-usecases/v5_usecase.md) — restore the gateway after V2.
+- [V6: No double charge](test-usecases/v6_usecase.md) — check redelivery and payment correctness.
+- [V7: Hold expiry](test-usecases/v7_usecase.md) — test cancellation and late-payment compensation.
+- [V8: Control](test-usecases/v8_usecase.md) — repeat V2/V3 with gateway protections disabled.
+
+V3 runs during V2; V5 follows V2; V7 uses a longer slowdown; V8 compares
+against V2/V3. V4 and V6 are independent.
 
 
-
-## Bulkhead verification
-
-**Use case:** A surge in bookings or slow gateway calls can consume all threads
-or connections. Bulkheads limit concurrent work and isolate resources so that
-other operations still have capacity. The configured semaphore limits are 40 concurrent
-booking creations and 5 concurrent gateway calls, with no waiting for a permit.
-
-### Booking surge (V4)
-
-1. Restart the booking service with configurable delay to simulate time consuming booking operation. If set < 1sec, booking operation finishes fast and bulkhead count value might always look like 40 (max value).  Run without the environment variable to
-   disable it.
-
-   ```sh
-   BOOKING_SIMULATED_CREATE_DELAY=5s mvn -pl booking-service spring-boot:run
-   ```
-
-   In separate terminal, continuously poll the booking bulkhead available-permit metric:
-
-   ```sh
-   watch -n 0.2 'curl -s "http://localhost:8081/actuator/metrics/resilience4j.bulkhead.available.concurrent.calls?tag=name:createBooking" | jq'
-   ```
-
-2. In a separate terminal, launch 1,000 simultaneous one-request virtual users. K6 must be installed locally before running it.
-
-
-   ```sh
-   bash booking-service/scripts/v4_booking-surge.sh
-   ```
-
-3. Completion of the script, gives the result as shown in the image. Evidence of the bulkhead is **HTTP 429** for excess requests, with permits
-   never below zero and returning to 40 after the load. 
-   ![v4-result.png](images/v4-result.png)
-
-### Clean up Test data
-
-The cleanup script targets **every** booking with event ID
-`11111111-1111-1111-1111-111111111111`. It deletes their corresponding
-payment rows first, then the booking rows.
-
-1. Stop the booking and payment applications and finish any load-generating
-   requests. Ensure no other producers or consumers are using this Kafka
-   instance.
-2. Keep the two PostgreSQL services running and execute:
-
-   ```sh
-   bash booking-service/scripts/booking-cleanup.sh --allow-retained-kafka
-   ```
-
-   It displays the booking count, and asks for `DELETE` confirmation. This opt-in waits until the sum of reported numeric consumer lag is zero, then
-asks for confirmation. It does not check for missing consumer groups, unknown
-lag, or DLT records; verify those separately if needed. 

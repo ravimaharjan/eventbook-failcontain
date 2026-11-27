@@ -1,7 +1,8 @@
 target/
 *.md
 !README.md
-!usecases.md
+!kafka-consumer-throttle.md
+!test-usecases/*.md
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
